@@ -36,7 +36,7 @@ def list_results():
             "version": version,
             "testcases": list(testcases),
             "submitter": "TODO",
-            "filename": f,
+            "location": f"/results/{f}",
         }
         results["files"].append(r)
 
@@ -52,4 +52,5 @@ def serve_file_in_dir(path):
     return send_from_directory(results_file_dir, path)
 
 
-app.run(host="0.0.0.0", port=8080, debug=True)
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", debug=True)

@@ -1,4 +1,5 @@
 from flask import Flask
+import json
 import requests
 import pandas as pd
 import dash
@@ -8,8 +9,8 @@ import dash_html_components as html
 from dash.dependencies import Input, Output
 import plotly.graph_objects as go
 
-result_server = "192.168.1.210"
-result_server_port = 8080
+result_server = "127.0.0.1"
+result_server_port = 5000
 
 app = dash.Dash(
     __name__,
@@ -46,7 +47,15 @@ def create_metrics_dropdown():
 @app.callback(Output("datasets", "data"), [Input("metrics-dropdown", "value")])
 def update_dataset_data(chosen_metric):
     data = get_results()
+    for d in data:
+        d.update({"id": json.dumps(d, sort_keys=True)})
     return [d for d in data if chosen_metric in d["testcases"]]
+
+
+@app.callback(Output("graph", "figure"), [Input("datasets", "selected_row_ids")])
+def update_graph_figure(row_ids):
+    print(row_ids)
+    return go.Figure()
 
 
 def create_dataset_table():
