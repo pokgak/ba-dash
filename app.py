@@ -27,11 +27,15 @@ def get_results(server, port):
 
 def update_dataset_table():
     data = get_results(result_server, result_server_port)
+
+    INCLUDE_HEADERS = ["board", "version", "submitter"]
     headers = data[0].keys()
     return dash_table.DataTable(
         id="datatable",
         columns=[
-            {"name": key.capitalize(), "id": key} for key in headers if key != "path"
+            {"name": key.capitalize(), "id": key}
+            for key in headers
+            if key in INCLUDE_HEADERS
         ],
         data=data,
         filter_action="native",

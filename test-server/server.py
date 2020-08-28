@@ -21,15 +21,23 @@ def list_results():
     files = os.listdir(results_file_dir)
     results = {"files": []}
     for f in files:
-        metadata = (
-            ET.parse(os.path.join(results_file_dir, f))
-            .getroot()
-            .find('.//testcase[@classname="tests_timer_benchmarks.Metadata"]')
+        root = ET.parse(os.path.join(results_file_dir, f)).getroot()
+        testcases = {
+            tc.get("classname").split(".")[-1] for tc in root.findall(".//testcase")
+        }
+        metadata = root.find(
+            './/testcase[@classname="tests_timer_benchmarks.Metadata"]'
         )
         board = metadata.find('.//property[@name="board"]').get("value")
         version = metadata.find('.//property[@name="version"]').get("value")
 
-        r = {"path": f"/results/{f}", "board": board, "version": version, "submitter": "TODO"}
+        r = {
+            "board": board,
+            "version": version,
+            "testcases": list(testcases),
+            "submitter": "TODO",
+            "filename": f,
+        }
         results["files"].append(r)
 
     return flask.jsonify(results)
