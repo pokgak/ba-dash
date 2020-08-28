@@ -30,7 +30,7 @@ def get_metrics():
     metrics = set()
     for f in files:
         metrics.update(f["testcases"])
-    metrics.discard("Metadata")
+    metrics.discard("metadata")
     return metrics
 
 
@@ -52,12 +52,6 @@ def update_dataset_data(chosen_metric):
     return [d for d in data if chosen_metric in d["testcases"]]
 
 
-@app.callback(Output("graph", "figure"), [Input("datasets", "selected_row_ids")])
-def update_graph_figure(row_ids):
-    print(row_ids)
-    return go.Figure()
-
-
 def create_dataset_table():
     data = get_results()
 
@@ -76,12 +70,34 @@ def create_dataset_table():
     )
 
 
-def create_graph():
-    return dcc.Graph(id="graph", figure=go.Figure())
+@app.callback(
+    Output("graph", "figure"),
+    [Input("metrics-dropdown", "value"), Input("datasets", "selected_row_ids")],
+    [State("memory", "data")],  # TODO: store id from metrics-dropdown value possible?
+)
+def update_graph(metric, row_ids, figstore):
+    if not metric or not row_ids:
+        return dcc.Graph(id="graph", figure=go.Figure())
+
+    fig = figstore[metric] if metric in figstore else go.Figure()
+    if metric == "drift":
+        ff = DriftFigureFactory()
+
+    traces = []
+    for rid in row_ids:
+        location = "/results/20200713-dkfqcje.xml"  # FIXME: get location from row id
+        r = requests.get(location)
+        if r.status_code != 200:
+            raise RuntimeError(f"Failed to fetch file {location}")
+        traces.append(ff.make_trace(r.content))
+
+    fig = go.Figure({"data": traces, "layout": ff.layout})
+    return dcc.Graph(id="graph", figure=fig)
 
 
 app.layout = html.Div(
     [
+        dcc.Store(id="memory"),  # TODO: one store per figure type?
         html.H1(
             "RIOT Benchmarking Results",
             className="text-bold text-center text-5xl p-10 bg-gray-300",
