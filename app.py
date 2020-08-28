@@ -15,18 +15,34 @@ app = dash.Dash(
     external_stylesheets=["https://unpkg.com/tailwindcss@^1.0/dist/tailwind.min.css"],
 )
 
-metrics = ["drift", "jitter", "accuracy"]
 
-
-def get_results(server, port):
-    r = requests.get(f"http://{server}:{port}/list")
+def get_results():
+    r = requests.get(f"http://{result_server}:{result_server_port}/list")
     if r.status_code != 200:
         return [{"version": "NONE", "board": "NONE", "submitter": "NONE"}]
     return r.json()["files"]
 
 
+def get_metrics():
+    files = get_results()
+    metrics = set()
+    for f in files:
+        metrics.update(f["testcases"])
+    metrics.discard("Metadata")
+    return metrics
+
+
+def update_metrics_dropdown():
+    return dcc.Dropdown(
+        options=[{"label": m.capitalize(), "value": m} for m in get_metrics()],
+        value="MTL",
+        placeholder="Select a metric",
+        className="mx-auto",
+    )
+
+
 def update_dataset_table():
-    data = get_results(result_server, result_server_port)
+    data = get_results()
 
     INCLUDE_HEADERS = ["board", "version", "submitter"]
     headers = data[0].keys()
@@ -54,21 +70,10 @@ app.layout = html.Div(
             className="text-bold text-center text-5xl p-10 bg-gray-300",
         ),
         html.Div(
-            className="container mx-auto space-y-10",
+            className="container mx-auto my-10 space-y-10",
             children=[
-                html.Div(),
                 html.Div(
-                    [
-                        html.Div("Step 1: Choose a metric"),
-                        dcc.Dropdown(
-                            options=[
-                                {"label": m.capitalize(), "value": m} for m in metrics
-                            ],
-                            value="MTL",
-                            placeholder="Select a metric",
-                            className="mx-auto",
-                        ),
-                    ],
+                    [html.Div("Step 1: Choose a metric"), update_metrics_dropdown()],
                     className="space-y-3",
                 ),
                 html.Div(
@@ -80,14 +85,14 @@ app.layout = html.Div(
         html.Div(
             get_graph(), id="graph-container", className="mx-auto lg:w-3/4 md:w-full"
         ),
-        html.Footer(
-            [
-                html.Div("Impressum"),
-                html.Div("Contact"),
-                html.Div("About"),
-            ],
-            className="bg-gray-200 flex flex-row justify-center space-x-10 p-5",
-        ),
+        # html.Footer(
+        #     [
+        #         html.Div("Impressum"),
+        #         html.Div("Contact"),
+        #         html.Div("About"),
+        #     ],
+        #     className="bg-gray-200 flex flex-row justify-center space-x-10 p-5",
+        # ),
     ],
     className="bg-white",
 )
