@@ -1,4 +1,5 @@
 from flask import Flask
+import requests
 import pandas as pd
 import dash
 import dash_table
@@ -6,6 +7,8 @@ import dash_core_components as dcc
 import dash_html_components as html
 import plotly.graph_objects as go
 
+result_server = "192.168.1.210"
+result_server_port = 8080
 
 app = dash.Dash(
     __name__,
@@ -14,27 +17,26 @@ app = dash.Dash(
 
 metrics = ["drift", "jitter", "accuracy"]
 
-data = pd.DataFrame(
-    {
-        "version": [
-            "Release 2020.01",
-            "Release 2020.04",
-            "Release 2020.07",
-            "Release 2020.10",
-        ],
-        "board": ["samr21-xpro", "yellow", "frdm-kwz2", "bluepill"],
-        "submitter": ["abu", "ali", "ahmad", "ci"],
-    }
-)
 
-# TODO; dynamically load table
-data_table = dash_table.DataTable(
-    id="datatable",
-    columns=[{"name": col.capitalize(), "id": col} for col in data.columns],
-    data=data.to_dict(orient="records"),
-    filter_action="native",
-    row_selectable="multi",
-)
+def get_results(server, port):
+    r = requests.get(f"http://{server}:{port}/list")
+    if r.status_code != 200:
+        return [{"version": "NONE", "board": "NONE", "submitter": "NONE"}]
+    return r.json()["files"]
+
+
+def update_dataset_table():
+    data = get_results(result_server, result_server_port)
+    headers = data[0].keys()
+    return dash_table.DataTable(
+        id="datatable",
+        columns=[
+            {"name": key.capitalize(), "id": key} for key in headers if key != "path"
+        ],
+        data=data,
+        filter_action="native",
+        row_selectable="multi",
+    )
 
 
 def get_graph():
@@ -66,7 +68,7 @@ app.layout = html.Div(
                     className="space-y-3",
                 ),
                 html.Div(
-                    [html.Div("Step 2: Choose dataset(s)"), data_table],
+                    [html.Div("Step 2: Choose dataset(s)"), update_dataset_table()],
                     className="space-y-3",
                 ),
             ],
@@ -87,4 +89,4 @@ app.layout = html.Div(
 )
 
 if __name__ == "__main__":
-    app.run_server(debug=True)
+    app.run_server(debug=True, host="0.0.0.0")
