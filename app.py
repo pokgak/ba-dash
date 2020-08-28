@@ -5,6 +5,7 @@ import dash
 import dash_table
 import dash_core_components as dcc
 import dash_html_components as html
+from dash.dependencies import Input, Output
 import plotly.graph_objects as go
 
 result_server = "192.168.1.210"
@@ -32,8 +33,9 @@ def get_metrics():
     return metrics
 
 
-def update_metrics_dropdown():
+def create_metrics_dropdown():
     return dcc.Dropdown(
+        id="metrics-dropdown",
         options=[{"label": m.capitalize(), "value": m} for m in get_metrics()],
         value="MTL",
         placeholder="Select a metric",
@@ -41,25 +43,31 @@ def update_metrics_dropdown():
     )
 
 
-def update_dataset_table():
+@app.callback(Output("datasets", "data"), [Input("metrics-dropdown", "value")])
+def update_dataset_data(chosen_metric):
+    data = get_results()
+    return [d for d in data if chosen_metric in d["testcases"]]
+
+
+def create_dataset_table():
     data = get_results()
 
     INCLUDE_HEADERS = ["board", "version", "submitter"]
     headers = data[0].keys()
     return dash_table.DataTable(
-        id="datatable",
+        id="datasets",
         columns=[
             {"name": key.capitalize(), "id": key}
             for key in headers
             if key in INCLUDE_HEADERS
         ],
-        data=data,
+        # data=[],  # let the data updated by the update_dataset_data callback
         filter_action="native",
         row_selectable="multi",
     )
 
 
-def get_graph():
+def create_graph():
     return dcc.Graph(id="graph", figure=go.Figure())
 
 
@@ -73,17 +81,17 @@ app.layout = html.Div(
             className="container mx-auto my-10 space-y-10",
             children=[
                 html.Div(
-                    [html.Div("Step 1: Choose a metric"), update_metrics_dropdown()],
+                    [html.Div("Step 1: Choose a metric"), create_metrics_dropdown()],
                     className="space-y-3",
                 ),
                 html.Div(
-                    [html.Div("Step 2: Choose dataset(s)"), update_dataset_table()],
+                    [html.Div("Step 2: Choose dataset(s)"), create_dataset_table()],
                     className="space-y-3",
                 ),
             ],
         ),
         html.Div(
-            get_graph(), id="graph-container", className="mx-auto lg:w-3/4 md:w-full"
+            create_graph(), id="graph-container", className="mx-auto lg:w-3/4 md:w-full"
         ),
         # html.Footer(
         #     [
