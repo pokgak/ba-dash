@@ -23,7 +23,7 @@ def list_results():
     for f in files:
         root = ET.parse(os.path.join(results_file_dir, f)).getroot()
         testcases = {
-            tc.get("classname").split(".")[-1] for tc in root.findall(".//testcase")
+            tc.get("classname").split(".")[-1].lower() for tc in root.findall(".//testcase")
         }
         metadata = root.find(
             './/testcase[@classname="tests_timer_benchmarks.Metadata"]'
@@ -43,7 +43,7 @@ def list_results():
     return flask.jsonify(results)
 
 
-@app.route("/<path:path>", methods=["GET"])
+@app.route("/results/<path:path>", methods=["GET"])
 def serve_file_in_dir(path):
 
     if not os.path.isfile(os.path.join(results_file_dir, path)):
