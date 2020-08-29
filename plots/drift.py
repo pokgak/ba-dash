@@ -4,8 +4,10 @@ import pandas as pd
 from ast import literal_eval
 from pandera import Column, DataFrameSchema, Int, String, Check
 
+from plots.base import FigureFactoryBase
 
-class DriftFigureFactory:
+
+class DriftFigureFactory(FigureFactoryBase):
     def __init__(self):
         self.schema = DataFrameSchema(
             {
@@ -25,7 +27,7 @@ class DriftFigureFactory:
             boxmode="group",
         )
 
-    def get_dataset(self, data):
+    def parse_dataset(self, data):
         """Parse the file
 
         @return dataframe with required info for creating trace
@@ -75,7 +77,7 @@ class DriftFigureFactory:
         """Make trace for given dataset labeled with id"""
         # self.schema.validate(df)   # TODO
 
-        df = self.get_dataset(data)
+        df = self.parse_dataset(data)
 
         return go.Box(x=df["time"], y=df["diff_percentage"], name=id).to_plotly_json()
 
