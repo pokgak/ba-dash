@@ -6,8 +6,11 @@ import dash
 import dash_table
 import dash_core_components as dcc
 import dash_html_components as html
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
+from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
+
+from plots.drift import DriftFigureFactory
 
 result_server = "127.0.0.1"
 result_server_port = 5000
@@ -44,7 +47,7 @@ def create_metrics_dropdown():
     )
 
 
-@app.callback(Output("datasets", "data"), [Input("metrics-dropdown", "value")])
+@app.callback(Output("datasets", "data"), Input("metrics-dropdown", "value"))
 def update_dataset_data(chosen_metric):
     data = get_results()
     for d in data:
@@ -71,25 +74,32 @@ def create_dataset_table():
 
 
 @app.callback(
-    Output("graph", "figure"),
-    [Input("metrics-dropdown", "value"), Input("datasets", "selected_row_ids")],
-    [State("memory", "data")],  # TODO: store id from metrics-dropdown value possible?
+    Output("graph-container", "children"),
+    Input("metrics-dropdown", "value"),
+    Input("datasets", "selected_row_ids"),
+    State("memory", "data"),  # TODO: store id from metrics-dropdown value possible?
 )
 def update_graph(metric, row_ids, figstore):
-    if not metric or not row_ids:
-        return dcc.Graph(id="graph", figure=go.Figure())
+    if metric is None or row_ids is None:
+        raise PreventUpdate
 
-    fig = figstore[metric] if metric in figstore else go.Figure()
+    if figstore is None:
+        figstore = dict()
+    if metric not in figstore:
+        figstore[metric] = go.Figure()
+    fig = figstore[metric]
     if metric == "drift":
         ff = DriftFigureFactory()
+    else:
+        raise RuntimeError(f"Unknown metric: {metric}")
 
     traces = []
     for rid in row_ids:
         location = "/results/20200713-dkfqcje.xml"  # FIXME: get location from row id
-        r = requests.get(location)
+        r = requests.get(f"http://{result_server}:{result_server_port}/{location[1:]}")
         if r.status_code != 200:
             raise RuntimeError(f"Failed to fetch file {location}")
-        traces.append(ff.make_trace(r.content))
+        traces.append(ff.make_trace(rid, r.content))
 
     fig = go.Figure({"data": traces, "layout": ff.layout})
     return dcc.Graph(id="graph", figure=fig)
@@ -116,7 +126,9 @@ app.layout = html.Div(
             ],
         ),
         html.Div(
-            create_graph(), id="graph-container", className="mx-auto lg:w-3/4 md:w-full"
+            dcc.Graph(id="graph", figure=go.Figure()),
+            id="graph-container",
+            className="mx-auto lg:w-3/4 md:w-full",
         ),
         # html.Footer(
         #     [

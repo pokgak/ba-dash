@@ -18,18 +18,19 @@ class DriftFigureFactory:
                 ),
             }
         )
-        self.layout = {
-            "title": {"text": "Drift for Sleep Duration seconds"},
-            "yaxis": {"title": {"text": "Percentage Actual/Given Sleep Duration [%]"}},
-            "xaxis": {"title": {"text": "X axis do something"}},
-        }
+        self.layout = go.Layout(
+            title="Drift for Sleep Duration seconds",
+            yaxis={"title": {"text": "Percentage Actual/Given Sleep Duration [%]"}},
+            xaxis={"title": {"text": "X axis do something"}},
+            boxmode="group",
+        )
 
     def get_dataset(self, data):
         """Parse the file
 
         @return dataframe with required info for creating trace
         """
-        root = ET.fromstring(data).getroot()
+        root = ET.fromstring(data)
 
         drift_simple_single = dict()
         dss = drift_simple_single
@@ -68,13 +69,13 @@ class DriftFigureFactory:
         df["diff_percentage"] = df["diff_dut_philip"] / df["dut"] * 100
         df.reset_index(["time", "repeat"], inplace=True)
 
-        self.dataset.append(df)
+        return df
 
     def make_trace(self, id, data):
         """Make trace for given dataset labeled with id"""
         # self.schema.validate(df)   # TODO
 
-        df = get_dataset(data)
+        df = self.get_dataset(data)
 
         return go.Box(x=df["time"], y=df["diff_percentage"], name=id).to_plotly_json()
 
