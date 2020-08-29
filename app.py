@@ -41,18 +41,28 @@ def create_metrics_dropdown():
     return dcc.Dropdown(
         id="metrics-dropdown",
         options=[{"label": m.capitalize(), "value": m} for m in get_metrics()],
-        value="MTL",
         placeholder="Select a metric",
         className="mx-auto",
     )
 
 
-@app.callback(Output("datasets", "data"), Input("metrics-dropdown", "value"))
+@app.callback(
+    Output("datasets", "data"),
+    Output("datasets", "selected_row_ids"),
+    Output("datasets", "selected_rows"),
+    Input("metrics-dropdown", "value"),
+)
 def update_dataset_data(chosen_metric):
+    if chosen_metric is None:
+        return None, [], []
+    
     data = get_results()
     for d in data:
         d.update({"id": json.dumps(d, sort_keys=True)})
-    return [d for d in data if chosen_metric in d["testcases"]]
+    return (
+        [d for d in data if chosen_metric in d["testcases"]],
+        [], []  # clear checkbox when new metric is selected
+    )
 
 
 def create_dataset_table():
@@ -70,6 +80,8 @@ def create_dataset_table():
         # data=[],  # let the data updated by the update_dataset_data callback
         filter_action="native",
         row_selectable="multi",
+        cell_selectable=False,
+        fixed_rows=dict(headers=True, data=5),
     )
 
 
@@ -80,8 +92,12 @@ def create_dataset_table():
     State("memory", "data"),  # TODO: store id from metrics-dropdown value possible?
 )
 def update_graph(metric, row_ids, figstore):
-    if metric is None or row_ids is None:
-        raise PreventUpdate
+    if metric is None:
+        return dcc.Graph(id="graph", figure=go.Figure())
+    ff = get_figure_factory(metric)
+
+    if row_ids is None:
+        return dcc.Graph(id="graph", figure=go.Figure({"layout": ff.layout}))    
 
     if figstore is None:
         figstore = dict()
