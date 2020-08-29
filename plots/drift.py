@@ -1,8 +1,9 @@
 import xml.etree.ElementTree as ET
-import plotly.graph_objects as go
-import pandas as pd
 from ast import literal_eval
-from pandera import Column, DataFrameSchema, Int, String, Check
+
+import pandas as pd
+import plotly.graph_objects as go
+from pandera import Check, Column, DataFrameSchema, Int, String
 
 from plots.base import FigureFactoryBase
 

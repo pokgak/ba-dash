@@ -1,9 +1,8 @@
 import os
-
 import xml.etree.ElementTree as ET
+
 import flask
-from flask import Flask
-from flask import send_from_directory
+from flask import Flask, send_from_directory
 
 static_file_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "static")
 results_file_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "results")
@@ -23,7 +22,8 @@ def list_results():
     for f in files:
         root = ET.parse(os.path.join(results_file_dir, f)).getroot()
         testcases = {
-            tc.get("classname").split(".")[-1].lower() for tc in root.findall(".//testcase")
+            tc.get("classname").split(".")[-1].lower()
+            for tc in root.findall(".//testcase")
         }
         metadata = root.find(
             './/testcase[@classname="tests_timer_benchmarks.Metadata"]'

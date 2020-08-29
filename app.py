@@ -1,17 +1,18 @@
-from flask import Flask
 import json
-import requests
-import pandas as pd
+
 import dash
-import dash_table
 import dash_core_components as dcc
 import dash_html_components as html
+import dash_table
+import pandas as pd
+import plotly.graph_objects as go
+import requests
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
-import plotly.graph_objects as go
+from flask import Flask
 
-from plots.drift import DriftFigureFactory
 from plots.accuracy import AccuracyFigureFactory
+from plots.drift import DriftFigureFactory
 
 result_server = "127.0.0.1"
 result_server_port = 5000
@@ -61,13 +62,14 @@ def create_metrics_dropdown():
 def update_dataset_data(chosen_metric):
     if chosen_metric is None:
         return None, [], []
-    
+
     data = get_results()
     for d in data:
         d.update({"id": json.dumps(d, sort_keys=True)})
     return (
         [d for d in data if chosen_metric in d["testcases"]],
-        [], []  # clear checkbox when new metric is selected
+        [],
+        [],  # clear checkbox when new metric is selected
     )
 
 
@@ -112,7 +114,7 @@ def update_graph(metric, row_ids, figstore):
     ff = get_figure_factory(metric)
 
     if row_ids is None:
-        return dcc.Graph(id="graph", figure=go.Figure({"layout": ff.layout}))    
+        return dcc.Graph(id="graph", figure=go.Figure({"layout": ff.layout}))
 
     if figstore is None:
         figstore = dict()
@@ -132,7 +134,7 @@ def update_graph(metric, row_ids, figstore):
         else:
             traces.extend(tmp)
 
-    fig = go.Figure(data=traces, layout= ff.layout)
+    fig = go.Figure(data=traces, layout=ff.layout)
     return dcc.Graph(id="graph", figure=fig)
 
 
