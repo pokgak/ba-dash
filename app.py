@@ -11,6 +11,7 @@ from dash.exceptions import PreventUpdate
 import plotly.graph_objects as go
 
 from plots.drift import DriftFigureFactory
+from plots.accuracy import AccuracyFigureFactory
 
 result_server = "127.0.0.1"
 result_server_port = 5000
@@ -21,8 +22,13 @@ app = dash.Dash(
 )
 
 
+def send_request(path):
+    path = path[1:] if path[0] == "/" else path
+    return requests.get(f"http://{result_server}:{result_server_port}/{path}")
+
+
 def get_results():
-    r = requests.get(f"http://{result_server}:{result_server_port}/list")
+    r = send_request("/list")
     if r.status_code != 200:
         return [{"version": "NONE", "board": "NONE", "submitter": "NONE"}]
     return r.json()["files"]
@@ -85,6 +91,15 @@ def create_dataset_table():
     )
 
 
+def get_figure_factory(metric):
+    if metric == "drift":
+        return DriftFigureFactory()
+    elif metric == "sleep accuracy":
+        return AccuracyFigureFactory()
+    else:
+        raise RuntimeError(f"Unknown metric: {metric}")
+
+
 @app.callback(
     Output("graph-container", "children"),
     Input("metrics-dropdown", "value"),
@@ -104,20 +119,20 @@ def update_graph(metric, row_ids, figstore):
     if metric not in figstore:
         figstore[metric] = go.Figure()
     fig = figstore[metric]
-    if metric == "drift":
-        ff = DriftFigureFactory()
-    else:
-        raise RuntimeError(f"Unknown metric: {metric}")
 
     traces = []
     for rid in row_ids:
         location = "/results/20200713-dkfqcje.xml"  # FIXME: get location from row id
-        r = requests.get(f"http://{result_server}:{result_server_port}/{location[1:]}")
+        r = send_request(location)
         if r.status_code != 200:
             raise RuntimeError(f"Failed to fetch file {location}")
-        traces.append(ff.make_trace(rid, r.content))
+        tmp = ff.make_trace(rid, r.content)
+        if isinstance(tmp, dict):
+            traces.append(tmp)
+        else:
+            traces.extend(tmp)
 
-    fig = go.Figure({"data": traces, "layout": ff.layout})
+    fig = go.Figure(data=traces, layout= ff.layout)
     return dcc.Graph(id="graph", figure=fig)
 
 
